@@ -6,6 +6,17 @@ use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
 #[allow(unused)]
 pub const RADIANS_PER_DOT: f32 = 1.0 / 180.0;
 
+pub struct RotatorPlugin;
+
+impl Plugin for RotatorPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            run_camera_rotator, // , mouse_handler
+        );
+    }
+}
+
 #[allow(unused)]
 #[derive(Component)]
 pub struct MouseController {
@@ -79,6 +90,8 @@ pub fn rotate(
     y_key: KeyCode,
     z_key: KeyCode,
 ) {
+    // println!("rotating: {:?}", key_input);
+
     let mut rotation = 0.03;
     if key_input.pressed(rotator.key_shift_left) || key_input.pressed(rotator.key_shift_right) {
         rotation = -rotation;
