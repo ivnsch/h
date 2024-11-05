@@ -17,8 +17,8 @@ pub fn add_dots(
     let max = 5.;
     let step = 0.05;
 
-    let n = 1;
-    let l = 0;
+    let n = 2;
+    let l = 1;
     let m = 0;
 
     let mut x = min;
@@ -45,42 +45,67 @@ pub fn add_dots(
             while z <= max as f32 {
                 z += step;
 
-                let sc = to_spheric(Vec3::new(x, y, z));
-                let val = psi_mod(sc, n, l, m).unwrap();
+                let vec = Vec3::new(x, y, z);
+                if let Ok(sc) = to_spheric(vec) {
+                    let val = psi_mod(sc, n, l, m).unwrap();
 
-                if val > 0.1 {
-                    let _ = cmd
-                        .spawn((
-                            mesh.clone(),
-                            material.clone(),
-                            Transform::from_translation(Vec3::new(x, y, z))
-                                .with_scale(Vec3::new(cube_scale, cube_scale, cube_scale)),
-                        ))
-                        .id();
+                    // some thresholds to "see something" with reasonable performance
+                    // for n=1, l=0, m=0
+                    // if val > 0.1 {
+                    // for 2s the probability for a given point is very low!
+                    // for n=2, l=0, m=0
+                    // if val > 0.002 {
+                    // for n=2, l=1, m=0
+                    if val > 0.026 {
+                        let _ = cmd
+                            .spawn((
+                                mesh.clone(),
+                                material.clone(),
+                                Transform::from_translation(Vec3::new(x, y, z))
+                                    .with_scale(Vec3::new(cube_scale, cube_scale, cube_scale)),
+                            ))
+                            .id();
+                        sphere_count += 1;
+                    }
+                } else {
+                    println!("Couldn't get spheric coords for: {}", vec);
                 }
-
-                sphere_count += 1;
             }
         }
     }
     println!("finish render! objs: {}", sphere_count);
 }
 
+#[derive(Debug)]
 struct SphericCoords {
     rad: f32,
     theta: f32,
     phi: f32,
 }
 
-fn to_spheric(coords: Vec3) -> SphericCoords {
+// https://en.wikipedia.org/wiki/Spherical_coordinate_system#Cartesian_coordinates
+fn to_spheric(coords: Vec3) -> Result<SphericCoords, String> {
+    if coords.x == 0. && coords.y == 0. && coords.z == 0. {
+        return Err("Undefined".to_string());
+    }
     let x = coords.x;
     let y = coords.y;
     let z = coords.z;
-    let rad = (x.powi(2) + y.powi(2) + z.powi(2)).sqrt();
-    let theta = (y / x).atan();
-    let phi = (z / rad).acos();
 
-    SphericCoords { rad, theta, phi }
+    let pow_x = x.powi(2);
+    let pow_y = y.powi(2);
+    let pow_z = z.powi(2);
+
+    let rad = (pow_x + pow_y + pow_z).sqrt();
+    let theta = (z / rad).acos();
+    let phi = (x / (pow_x + pow_y).sqrt()).acos() * corrected_signum(y);
+
+    Ok(SphericCoords { rad, theta, phi })
+}
+
+// https://en.wikipedia.org/wiki/Sign_function#Definition
+fn corrected_signum(f: f32) -> f32 {
+    return if f == 0. { 0. } else { f.signum() };
 }
 
 fn psi_mod(sc: SphericCoords, n: u8, l: u8, m: i8) -> Result<f32, String> {
@@ -99,7 +124,7 @@ fn psi(sc: SphericCoords, n: u8, l: u8, m: i8) -> Result<Complex32, String> {
 
     // https://en.wikipedia.org/wiki/Bohr_radius#Reduced_Bohr_radius
     // let rbr = 5.29177210544e-11;
-    // we can set the reduced bohr radius to 1, allowing to pass radius in the same
+    // we can set the reduced bohr radius to 1, allowing to pass radius in the same unit
     let rbr = 1.;
     // floats casts here, for less verbosity
     let nf = n as f32;
@@ -107,12 +132,12 @@ fn psi(sc: SphericCoords, n: u8, l: u8, m: i8) -> Result<Complex32, String> {
 
     // left part under square root
     // these terms don't have any meaning other than internal grouping here
-    let term1 = (2. / nf * rbr).powi(3);
+    let term1 = (2. / (nf * rbr)).powi(3);
     let term2 = (n - l - 1).factorial() as f32 / ((2 * n) * (n + l).factorial()) as f32;
     let term3 = (term1 * term2).sqrt();
 
     let p = (2. * sc.rad) / (nf * rbr);
-    let term4 = std::f32::consts::E.powf(-p / 2.);
+    let term4: f32 = std::f32::consts::E.powf(-p / 2.);
     let term5 = term4 * p.powi(l.into());
     let term6 = term3 * term5;
 
@@ -145,8 +170,8 @@ fn laguerre_pol(n: u8, x: f32) -> Result<f32, String> {
     Ok(match n {
         0 => 1.,
         1 => -x + 1.,
-        2 => 1. / 2. * (x.powi(2) - 4. * x + 2.),
-        3 => 1. / 6. * (x.powi(3) + 9. * x.powi(2) - 18. * x + 6.),
+        2 => (1. / 2.) * (x.powi(2) - 4. * x + 2.),
+        3 => (1. / 6.) * (-x.powi(3) + 9. * x.powi(2) - 18. * x + 6.),
         // TODO
         _ => return Err(format!("Not supported: n: {}", n)),
     })
@@ -186,3 +211,29 @@ fn spheric_harmonic(l: u8, m: i8, theta: f32, phi: f32) -> Result<Complex32, Str
 
 //     term3 * term4 * term5
 // }
+
+#[cfg(test)]
+mod test {
+    use bevy::math::Vec3;
+    use num_complex::ComplexFloat;
+
+    use super::{psi, to_spheric};
+
+    #[test]
+    fn test() {
+        let x = 0.1;
+        let y = 0.;
+        let z = 0.;
+
+        let n: u8 = 2;
+        let l: u8 = 0;
+        let m = 0;
+
+        let sc = to_spheric(Vec3::new(x, y, z)).unwrap();
+        println!("spheric: {:?}", sc);
+        let val = psi(sc, n, l, m).unwrap();
+
+        assert_eq!(val.im(), 0.);
+        assert_eq!(val.re(), 0.08538426);
+    }
+}

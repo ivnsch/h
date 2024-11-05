@@ -24,7 +24,7 @@ fn test_shader_code() {
     let y = 0.1;
     let z = 0.1;
 
-    let n: u32 = 1;
+    let n: u32 = 2;
     let l: u32 = 0;
     let m = 0;
 
