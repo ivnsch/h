@@ -13,27 +13,17 @@ pub fn add_dots(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let min = -7.;
-    let max = 7.;
-    let step = 0.01;
+    let min = -5.;
+    let max = 5.;
+    let step = 0.05;
 
     let n = 1;
     let l = 0;
     let m = 0;
 
-    let x = 0.;
-    let y = 0.;
-    let z = 0.;
-
-    let rad = (x.powi(2) + y.powi(2) + z.powi(2)).sqrt();
-    let theta = (y / x).atan();
-    let phi = (z / rad).acos();
-    let val = psi_mod(rad, theta, phi, n, l, m);
-    println!("{:?}", val);
-
     let mut x = min;
-    let mut y = min;
-    let mut z = min;
+    let mut y;
+    let mut z;
 
     let mesh_handle = meshes.add(Cuboid { ..default() }.mesh());
     let material_handle = materials.add(StandardMaterial {
@@ -44,7 +34,7 @@ pub fn add_dots(
     let mesh = Mesh3d(mesh_handle);
     let material = MeshMaterial3d(material_handle);
 
-    let cube_scale = 0.008;
+    let cube_scale = 0.05;
     let mut sphere_count = 0;
     while x <= max as f32 {
         x += step;
@@ -55,41 +45,54 @@ pub fn add_dots(
             while z <= max as f32 {
                 z += step;
 
-                // println!("point: {},{},{}", x, y, z);
+                let sc = to_spheric(Vec3::new(x, y, z));
+                let val = psi_mod(sc, n, l, m).unwrap();
 
-                // let rad = (x.powi(2) + y.powi(2) + z.powi(2)).sqrt();
-                // let theta = (y / x).atan();
-                // let phi = (z / rad).acos();
-                // let val = psi_mod(rad, theta, phi, n, l, m);
-                // println!("{:?}", val);
+                if val > 0.1 {
+                    let _ = cmd
+                        .spawn((
+                            mesh.clone(),
+                            material.clone(),
+                            Transform::from_translation(Vec3::new(x, y, z))
+                                .with_scale(Vec3::new(cube_scale, cube_scale, cube_scale)),
+                        ))
+                        .id();
+                }
 
                 sphere_count += 1;
-                let _ = cmd
-                    .spawn((
-                        mesh.clone(),
-                        material.clone(),
-                        Transform::from_translation(Vec3::new(x, y, z))
-                            .with_scale(Vec3::new(cube_scale, cube_scale, cube_scale)),
-                    ))
-                    .id();
             }
         }
     }
     println!("finish render! objs: {}", sphere_count);
 }
 
-fn psi_mod(rad: f32, theta: f32, phi: f32, n: u8, l: u8, m: i8) -> Result<f32, String> {
-    let psi = psi(rad, theta, phi, n, l, m)?;
+struct SphericCoords {
+    rad: f32,
+    theta: f32,
+    phi: f32,
+}
+
+fn to_spheric(coords: Vec3) -> SphericCoords {
+    let x = coords.x;
+    let y = coords.y;
+    let z = coords.z;
+    let rad = (x.powi(2) + y.powi(2) + z.powi(2)).sqrt();
+    let theta = (y / x).atan();
+    let phi = (z / rad).acos();
+
+    SphericCoords { rad, theta, phi }
+}
+
+fn psi_mod(sc: SphericCoords, n: u8, l: u8, m: i8) -> Result<f32, String> {
+    let psi = psi(sc, n, l, m)?;
     assert!(!psi.re.is_nan());
-    // println!("factorial: {}", 0_u32.factorial());
-    // println!("psi.re: {}, im: {}", psi.re, psi.im);
     assert!(!psi.norm_sqr().is_nan());
     Ok(psi.norm_sqr())
 }
 
 // https://en.wikipedia.org/wiki/Hydrogen_atom#Wavefunction
 // under "normalized position wavefunctions"
-fn psi(rad: f32, theta: f32, phi: f32, n: u8, l: u8, m: i8) -> Result<Complex32, String> {
+fn psi(sc: SphericCoords, n: u8, l: u8, m: i8) -> Result<Complex32, String> {
     if n <= l {
         return Err(format!("n: {} <= l: {}", n, l));
     }
@@ -108,14 +111,14 @@ fn psi(rad: f32, theta: f32, phi: f32, n: u8, l: u8, m: i8) -> Result<Complex32,
     let term2 = (n - l - 1).factorial() as f32 / ((2 * n) * (n + l).factorial()) as f32;
     let term3 = (term1 * term2).sqrt();
 
-    let p = (2. * rad) / (nf * rbr);
+    let p = (2. * sc.rad) / (nf * rbr);
     let term4 = std::f32::consts::E.powf(-p / 2.);
     let term5 = term4 * p.powi(l.into());
     let term6 = term3 * term5;
 
     // can do n - l - 1 because we checked n > l
     let term7 = laguerre_pol(n - l - 1, p)?;
-    let term8 = spheric_harmonic(l, m, theta, phi)?;
+    let term8 = spheric_harmonic(l, m, sc.theta, sc.phi)?;
 
     // println!("p: {}", p);
     // println!("term1: {}", term1);
@@ -154,7 +157,7 @@ fn spheric_harmonic(l: u8, m: i8, theta: f32, phi: f32) -> Result<Complex32, Str
     // quick access
     let oh = 1. / 2.; // one half
     let e = std::f32::consts::E;
-    let ex = phi * -Complex::i(); // exponent (part)
+    let ex = phi * Complex::i(); // exponent (part)
 
     Ok(match (l, m) {
         (0, 0) => Complex::new(oh * (1. / PI).sqrt(), 0.),
