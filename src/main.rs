@@ -149,14 +149,14 @@ fn spheric_harmonic(l: u32, m: i32, theta: f32, phi: f32) -> Complex {
         1 => {
             match m {
                 -1 => {
-                    return mul(my_pow(neg(ex)), oh * sqrt(3. / (2. * pi)) * theta.sin());
+                    return mul(e_to_i_pow(neg(ex)), oh * sqrt(3. / (2. * pi)) * sin(theta));
                 }
                 0 => {
-                    let real = oh * sqrt(3. / pi) * theta.cos();
+                    let real = oh * sqrt(3. / pi) * cos(theta);
                     return Complex::new(real, 1.);
                 }
                 1 => {
-                    return mul(my_pow(ex), -oh * sqrt(3. / (2. * pi)) * theta.sin());
+                    return mul(e_to_i_pow(ex), -oh * sqrt(3. / (2. * pi)) * sin(theta));
                 }
                 _ => {
                     // TODO throw error?
@@ -168,7 +168,7 @@ fn spheric_harmonic(l: u32, m: i32, theta: f32, phi: f32) -> Complex {
             -2 => {
                 let ex = Complex::new(0., -2. * phi);
                 return mul(
-                    my_pow(ex),
+                    e_to_i_pow(ex),
                     1. / 4. * sqrt(15. / (2. * pi)) * pow(sin(theta), 2.),
                 );
             }
@@ -176,7 +176,7 @@ fn spheric_harmonic(l: u32, m: i32, theta: f32, phi: f32) -> Complex {
             -1 => {
                 let ex = Complex::new(0., -phi);
                 return mul(
-                    my_pow(ex),
+                    e_to_i_pow(ex),
                     oh * sqrt(15. / (2. * pi)) * sin(theta) * cos(theta),
                 );
             }
@@ -189,14 +189,14 @@ fn spheric_harmonic(l: u32, m: i32, theta: f32, phi: f32) -> Complex {
             1 => {
                 let ex = Complex::new(0., phi);
                 return mul(
-                    my_pow(ex),
+                    e_to_i_pow(ex),
                     -oh * sqrt(15. / (2. * pi)) * sin(theta) * cos(theta),
                 );
             }
             2 => {
                 let ex = Complex::new(0., 2. * phi);
                 return mul(
-                    my_pow(ex),
+                    e_to_i_pow(ex),
                     1. / 4. * sqrt(15. / (2. * pi)) * pow(sin(theta), 2.),
                 );
             }
@@ -222,9 +222,9 @@ impl Complex {
     }
 }
 
-fn my_pow(c: Complex) -> Complex {
+fn e_to_i_pow(c: Complex) -> Complex {
     // e^ix = cos x + isin x,
-    return Complex::new(c.real.cos(), c.complex.sin());
+    return Complex::new(cos(c.real), sin(c.complex));
 }
 
 fn neg(c: Complex) -> Complex {
