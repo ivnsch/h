@@ -54,7 +54,7 @@ pub fn add_dots(
                 // for n=2, l=0, m=0
                 // if val > 0.002 {
                 // for n=2, l=1, m=0
-                if val > 0.026 {
+                if val > 0.0053 {
                     let _ = cmd
                         .spawn((
                             mesh.clone(),
