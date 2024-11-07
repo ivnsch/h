@@ -7,13 +7,12 @@ use bevy::{app::App, math::Vec3};
 use scene::system::add_scene;
 use system_3d::add_3d_space;
 
+// NOTE: this project tests a WGSL shader: syntax has to be compatible as far as possible
+
 fn main() {
     let app = &mut App::new();
-
     add_3d_space(app);
-
     add_scene(app);
-
     app.run();
 
     // test_shader_code();
@@ -61,19 +60,19 @@ fn to_spheric_coords(coords: Vec3) -> SphericCoords {
 }
 
 #[derive(Copy, Clone, Debug)]
-struct SphericCoords {
-    rad: f32,
-    theta: f32,
-    phi: f32,
+pub struct SphericCoords {
+    pub rad: f32,
+    pub theta: f32,
+    pub phi: f32,
 }
 
-fn prob(coords: SphericCoords, n: u32, l: u32, m: i32) -> f32 {
+pub fn prob(coords: SphericCoords, n: u32, l: u32, m: i32) -> f32 {
     let p = psi(coords, n, l, m);
     // we're returning just the real part so this is ok for now
     return pow(p, 2.0);
 }
 
-fn psi(coords: SphericCoords, n: u32, l: u32, m: i32) -> f32 {
+pub fn psi(coords: SphericCoords, n: u32, l: u32, m: i32) -> f32 {
     let rad = coords.rad;
     let theta = coords.theta;
     let phi = coords.phi;
@@ -127,6 +126,7 @@ fn laguerre_pol(n: u32, x: f32) -> f32 {
 }
 
 // https://en.wikipedia.org/wiki/Table_of_spherical_harmonics#Complex_spherical_harmonics
+// NOTE: don't improve syntax unless it's compatible with WGSL
 fn spheric_harmonic(l: u32, m: i32, theta: f32, phi: f32) -> Complex {
     // quick access
     let oh = 1. / 2.; // one half
