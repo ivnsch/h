@@ -118,7 +118,9 @@ fn laguerre_pol(n: u32, x: f32) -> f32 {
         3 => {
             return 1. / 6. * (pow(x, 3.0) + 9. * pow(x, 2.0) - 18. * x + 6.);
         }
-        // TODO
+        4 => {
+            return 1. / 24. * (pow(x, 4.0) - 16. * pow(x, 3.0) + 72. * pow(x, 2.0) - 96. * x + 24.)
+        }
         _ => {
             return 0.0;
         }
@@ -162,6 +164,47 @@ fn spheric_harmonic(l: u32, m: i32, theta: f32, phi: f32) -> Complex {
                 }
             }
         }
+        2 => match m {
+            -2 => {
+                let ex = Complex::new(0., -2. * phi);
+                return mul(
+                    my_pow(ex),
+                    1. / 4. * sqrt(15. / (2. * pi)) * pow(sin(theta), 2.),
+                );
+            }
+
+            -1 => {
+                let ex = Complex::new(0., -phi);
+                return mul(
+                    my_pow(ex),
+                    oh * sqrt(15. / (2. * pi)) * sin(theta) * cos(theta),
+                );
+            }
+            0 => {
+                return Complex::new(
+                    1. / 4. * sqrt(5. / pi) * (3. * pow(cos(theta), 2.) - 1.),
+                    0.,
+                );
+            }
+            1 => {
+                let ex = Complex::new(0., phi);
+                return mul(
+                    my_pow(ex),
+                    -oh * sqrt(15. / (2. * pi)) * sin(theta) * cos(theta),
+                );
+            }
+            2 => {
+                let ex = Complex::new(0., 2. * phi);
+                return mul(
+                    my_pow(ex),
+                    1. / 4. * sqrt(15. / (2. * pi)) * pow(sin(theta), 2.),
+                );
+            }
+            _ => {
+                return Complex::new(0., 0.);
+            }
+        },
+
         _ => {
             return Complex::new(0., 0.);
         }
@@ -190,6 +233,14 @@ fn neg(c: Complex) -> Complex {
 
 fn mul(c: Complex, r: f32) -> Complex {
     return Complex::new(c.real * r, -c.complex * r);
+}
+
+fn sin(f: f32) -> f32 {
+    f.sin()
+}
+
+fn cos(f: f32) -> f32 {
+    f.cos()
 }
 
 fn factorial(n: u32) -> u32 {
