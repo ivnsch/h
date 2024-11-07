@@ -16,9 +16,10 @@ fn main() {
 
     app.run();
 
-    test_shader_code();
+    // test_shader_code();
 }
 
+#[allow(unused)]
 fn test_shader_code() {
     let x = 0.4;
     let y = 0.1;
@@ -52,7 +53,7 @@ fn acos(n: f32) -> f32 {
     n.acos()
 }
 
-pub fn to_spheric_coords(coords: Vec3) -> SphericCoords {
+fn to_spheric_coords(coords: Vec3) -> SphericCoords {
     let rad = sqrt(pow(coords.x, 2.0) + pow(coords.y, 2.0) + pow(coords.z, 2.0));
     let theta = atan(coords.y / coords.x);
     let phi = acos(coords.z / rad);
@@ -130,15 +131,14 @@ fn spheric_harmonic(l: u32, m: i32, theta: f32, phi: f32) -> Complex {
     // quick access
     let oh = 1. / 2.; // one half
 
-    let e = 2.71828;
-    let PI = 3.14159;
+    let pi = 3.14159;
 
     let ex = Complex::new(0., -phi); // exponent (part)
 
     match l {
         0 => match m {
             0 => {
-                return Complex::new(oh * sqrt(1. / PI), 0.);
+                return Complex::new(oh * sqrt(1. / pi), 0.);
             }
             _ => {
                 return Complex::new(0., 0.);
@@ -147,14 +147,14 @@ fn spheric_harmonic(l: u32, m: i32, theta: f32, phi: f32) -> Complex {
         1 => {
             match m {
                 -1 => {
-                    return mul(my_pow(e, neg(ex)), oh * sqrt(3. / (2. * PI)) * theta.sin());
+                    return mul(my_pow(neg(ex)), oh * sqrt(3. / (2. * pi)) * theta.sin());
                 }
                 0 => {
-                    let real = oh * sqrt(3. / PI) * theta.cos();
+                    let real = oh * sqrt(3. / pi) * theta.cos();
                     return Complex::new(real, 1.);
                 }
                 1 => {
-                    return mul(my_pow(e, ex), -oh * sqrt(3. / (2. * PI)) * theta.sin());
+                    return mul(my_pow(ex), -oh * sqrt(3. / (2. * pi)) * theta.sin());
                 }
                 _ => {
                     // TODO throw error?
@@ -179,11 +179,7 @@ impl Complex {
     }
 }
 
-fn create_i() -> Complex {
-    return Complex::new(0.0, 1.0);
-}
-
-fn my_pow(f: f32, c: Complex) -> Complex {
+fn my_pow(c: Complex) -> Complex {
     // e^ix = cos x + isin x,
     return Complex::new(c.real.cos(), c.complex.sin());
 }
