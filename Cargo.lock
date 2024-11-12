@@ -349,9 +349,9 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
 name = "bevy"
-version = "0.15.0-rc.2"
+version = "0.15.0-rc.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91e8b3f590dd7eaae994170a8a9544f0de3b6d29a2df1f50cc030ccaa1a5048e"
+checksum = "ac8e850ce5420a008f058bc0edffad2c10480220708678d91df013854ba48624"
 dependencies = [
  "bevy_internal",
 ]
