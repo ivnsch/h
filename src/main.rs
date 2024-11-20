@@ -3,6 +3,8 @@ mod rotator;
 mod scene;
 mod system_3d;
 
+use std::f32::consts::PI;
+
 use bevy::{app::App, math::Vec3};
 use scene::system::add_scene;
 use system_3d::add_3d_space;
@@ -101,6 +103,32 @@ pub fn psi(coords: SphericCoords, n: u32, l: u32, m: i32) -> f32 {
 
     // for now we'll just ignore the complex part
     return term6 * term7 * term8.real;
+}
+
+pub fn phase_color(n: u32, time: u64) -> Color {
+    let phase = normalized_phase_for_n(n, time);
+    hslToRgb(phase as f32, 1., 0.5)
+}
+
+pub fn normalized_phase_for_n(n: u32, time: u64) -> f64 {
+    let pi = std::f64::consts::PI;
+    let phase = phase_for_n(n, time);
+    (phase / (2. * pi)).fract()
+}
+
+pub fn phase_for_n(n: u32, time: u64) -> f64 {
+    phase(energy(n), time)
+}
+
+pub fn phase(energy: f32, time: u64) -> f64 {
+    // https://en.wikipedia.org/wiki/Schr%C3%B6dinger_equation#Separation_of_variables
+    let h_bar: f32 = 1.054571817e-34;
+    (-energy as f64 * time as f64) / h_bar
+}
+
+pub fn energy(n: u32) -> f32 {
+    // https://phys.libretexts.org/Bookshelves/Quantum_Mechanics/Advanced_Quantum_Mechanics_(Kok)/13%3A_The_Schrodinger_Equation/13.6%3A_The_Hydrogen_Atom
+    -13.6 / pow(n as f32, 2.)
 }
 
 // https://en.wikipedia.org/wiki/Laguerre_polynomials#The_first_few_polynomials
@@ -266,6 +294,68 @@ fn factorial(n: u32) -> u32 {
         // TODO error
         _ => {
             return 0;
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Color {
+    r: f32,
+    g: f32,
+    b: f32,
+}
+
+// https://stackoverflow.com/a/9493060/930450
+pub fn hslToRgb(h: f32, s: f32, l: f32) -> Color {
+    let (r, g, b) = if s == 0. {
+        (l, l, l) // achromatic
+    } else {
+        let q = if l < 0.5 { l * (1. + s) } else { l + s - l * s };
+        let p = 2. * l - q;
+        let r = hueToRgb(p, q, h + 1. / 3.);
+        let g = hueToRgb(p, q, h);
+        let b = hueToRgb(p, q, h - 1. / 3.);
+        (r, g, b)
+    };
+
+    Color { r, g, b }
+}
+
+fn hueToRgb(p: f32, q: f32, t: f32) -> f32 {
+    let mut t = t;
+    if t < 0. {
+        t += 1.
+    };
+    if t > 1. {
+        t -= 1.
+    };
+    if t < 1. / 6. {
+        return p + (q - p) * 6. * t;
+    };
+    if t < 1. / 2. {
+        return q;
+    };
+    if t < 2. / 3. {
+        return p + (q - p) * (2. / 3. - t) * 6.;
+    };
+    p
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{hslToRgb, normalized_phase_for_n};
+
+    #[test]
+    fn colors() {
+        let rgb = hslToRgb(0.5, 0.5, 0.5);
+        println!("{:?}", rgb);
+    }
+
+    #[test]
+    fn colors_for_time() {
+        for i in 0..10 {
+            let phase = normalized_phase_for_n(1, i * 100);
+            println!("phase: {:?}", phase);
         }
     }
 }
